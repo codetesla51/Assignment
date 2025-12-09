@@ -186,6 +186,7 @@
             background: #f8f9fa;
             border-radius: 6px;
             margin-bottom: 8px;
+            overflow: hidden;
         }
 
         .file-item-left {
@@ -208,6 +209,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            word-break: break-all;
         }
 
         .file-item button {
@@ -382,6 +384,7 @@
             border-radius: 6px;
             border: 1px solid #f0f0f0;
             transition: all 0.3s;
+            overflow: hidden;
         }
 
         .file-link-wrapper:hover {
@@ -410,6 +413,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            word-break: break-all;
         }
 
         .file-link i {
@@ -861,11 +865,15 @@
                 const displayName = sanitizedName !== file.name ? 
                     `${sanitizedName} (renamed)` : file.name;
                 
+                // Truncate long filenames in display
+                const truncatedName = displayName.length > 50 ? 
+                    displayName.substring(0, 47) + '...' : displayName;
+                
                 return `
                     <div class="file-item">
                         <div class="file-item-left">
                             <i class="fas fa-file-pdf"></i>
-                            <span class="file-item-name" title="${displayName}">${displayName}</span>
+                            <span class="file-item-name" title="${displayName}">${truncatedName}</span>
                         </div>
                         <button type="button" onclick="removeFile(${index})">
                             <i class="fas fa-times"></i>
@@ -995,7 +1003,7 @@
             }
         });
 
-        // Load all submissions - OPTIMIZED VERSION
+        // Load all submissions - HIGHLY OPTIMIZED VERSION
         async function loadSubmissions() {
             const listEl = document.getElementById('submissionsList');
             listEl.innerHTML = `
@@ -1022,8 +1030,8 @@
                     return;
                 }
 
-                // Process students in parallel batches of 10 for better performance
-                const batchSize = 10;
+                // OPTIMIZED: Process ALL students in parallel with larger batch size
+                const batchSize = 20; // Increased from 10
                 const studentsData = [];
                 
                 for (let i = 0; i < folders.length; i += batchSize) {
@@ -1031,7 +1039,7 @@
                     const batchResults = await Promise.all(
                         batch.map(async (folder) => {
                             try {
-                                // Fetch info and files in parallel
+                                // OPTIMIZED: Fetch info and files in parallel
                                 const [infoResult, filesResult] = await Promise.all([
                                     supabaseClient.storage.from(BUCKET_NAME).download(`${folder.name}/info.json`).catch(() => null),
                                     supabaseClient.storage.from(BUCKET_NAME).list(folder.name)
@@ -1059,23 +1067,25 @@
                     );
                     
                     studentsData.push(...batchResults.filter(Boolean));
-                    
-                    // Show progress
-                    showMessage('viewMessage', `Loading... ${studentsData.length}/${folders.length}`, 'info');
                 }
 
+                // OPTIMIZED: Build HTML in one go instead of progressive updates
                 listEl.innerHTML = studentsData.map(student => {
                     const fileLinks = student.files.map(file => {
                         const { data } = supabaseClient.storage
                             .from(BUCKET_NAME)
                             .getPublicUrl(`${student.matricId}/${file.name}`);
 
+                        // Truncate long filenames
+                        const truncatedName = file.name.length > 40 ? 
+                            file.name.substring(0, 37) + '...' : file.name;
+
                         return `
                             <div class="file-link-wrapper">
                                 <a href="${data.publicUrl}" target="_blank" class="file-link">
                                     <div class="file-link-left">
                                         <i class="fas fa-file-pdf"></i>
-                                        <span title="${file.name}">${file.name}</span>
+                                        <span title="${file.name}">${truncatedName}</span>
                                     </div>
                                     <i class="fas fa-external-link-alt"></i>
                                 </a>
