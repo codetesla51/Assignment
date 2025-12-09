@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDU 313 Assignment Submission</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f8f9fa;
+            color: #000;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: #000;
+            color: #fff;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 18px 24px;
+            background: #fff;
+            border: none;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab i {
+            font-size: 1.1rem;
+        }
+
+        .tab.active {
+            color: #000;
+            font-weight: 600;
+            border-bottom-color: #000;
+            background: #fafafa;
+        }
+
+        .tab:hover:not(.active) {
+            background: #f5f5f5;
+            color: #000;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        label i {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #000;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        .file-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 6px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+
+        .file-upload-area:hover {
+            border-color: #000;
+            background: #f5f5f5;
+        }
+
+        .file-upload-area.dragover {
+            border-color: #000;
+            background: #f0f0f0;
+        }
+
+        .file-upload-area i {
+            font-size: 3rem;
+            color: #999;
+            margin-bottom: 15px;
+        }
+
+        .file-upload-area p {
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .file-upload-area small {
+            color: #999;
+            font-size: 0.85rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .selected-files {
+            margin-top: 20px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .file-item-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-item i {
+            color: #d32f2f;
+            font-size: 1.2rem;
+        }
+
+        .file-item-name {
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .file-item button {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-size: 1.1rem;
+        }
+
+        .file-item button:hover {
+            color: #d32f2f;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: #000;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #fff;
+            color: #000;
+            border: 2px solid #000;
+            width: auto;
+            padding: 12px 24px;
+            margin-bottom: 20px;
+        }
+
+        .btn-secondary:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .message {
+            padding: 16px 20px;
+            margin-bottom: 25px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .message i {
+            font-size: 1.2rem;
+        }
+
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #d32f2f;
+        }
+
+        .message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #388e3c;
+        }
+
+        .message.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-left: 4px solid #1976d2;
+        }
+
+        .submissions-grid {
+            display: grid;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .student-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .student-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .student-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .student-info h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .student-matric {
+            color: #666;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .file-count {
+            background: #f5f5f5;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .file-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .file-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #fafafa;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s;
+            border: 1px solid #f0f0f0;
+        }
+
+        .file-link:hover {
+            background: #000;
+            color: #fff;
+            border-color: #000;
+        }
+
+        .file-link-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-link i {
+            color: #d32f2f;
+            font-size: 1.2rem;
+        }
+
+        .file-link:hover i {
+            color: #fff;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .loading i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ddd;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #999;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #e0e0e0;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .container {
+                padding: 20px 15px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .tab {
+                font-size: 0.9rem;
+                padding: 14px 16px;
+            }
+
+            .tab span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>EDU 313 Assignment Submission</h1>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('submit')">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>Submit Assignment</span>
+            </button>
+            <button class="tab" onclick="switchTab('view')">
+                <i class="fas fa-list-alt"></i>
+                <span>View Submissions</span>
+            </button>
+        </div>
+
+        <!-- Submit Tab -->
+        <div id="submit" class="tab-content active">
+            <div class="card">
+                <div id="submitMessage"></div>
+                
+                <form id="submissionForm">
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-user"></i>
+                            Full Name
+                        </label>
+                        <input type="text" id="fullName" required placeholder="Enter your full name">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-id-card"></i>
+                            Matric Number
+                        </label>
+                        <input type="text" id="matricNumber" required placeholder="e.g., 22/25PJ077">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-file-pdf"></i>
+                            Upload Assignments (PDF only)
+                        </label>
+                        <div class="file-upload-area" id="dropArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Click to browse or drag and drop files here</p>
+                            <small>PDF files only, multiple files allowed</small>
+                        </div>
+                        <input type="file" id="files" accept=".pdf" multiple>
+                        <div class="selected-files" id="selectedFiles"></div>
+                    </div>
+
+                    <button type="submit" class="btn" id="submitBtn">
+                        <i class="fas fa-paper-plane"></i>
+                        Submit Assignments
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- View Tab -->
+        <div id="view" class="tab-content">
+            <div class="card">
+                <div id="viewMessage"></div>
+                <button onclick="loadSubmissions()" class="btn-secondary">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh Submissions
+                </button>
+                <div id="submissionsList" class="submissions-grid">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>Click "Refresh Submissions" to load</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase credentials
+        const SUPABASE_URL = 'https://ehasinzstggpytkeeqlm.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoYXNpbnpzdGdncHl0a2VlcWxtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNTY1MDA5OCwiZXhwIjoyMDUxMjI2MDk4fQ.qVWuSbbsyvKsX2vSpAV22020FK3uvx0KY_7YItDb-UM';
+        const BUCKET_NAME = 'Assignments';
+
+        // Initialize Supabase client
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let selectedFiles = [];
+
+        // Extract last 3 digits from matric number
+        function getMatricId(matricNumber) {
+            // Remove slashes and get last 3 digits
+            const cleaned = matricNumber.replace(/[\/\s]/g, '');
+            return cleaned.slice(-3);
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.closest('.tab').classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            if (tabName === 'view') {
+                loadSubmissions();
+            }
+        }
+
+        // File upload area interactions
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('files');
+
+        dropArea.addEventListener('click', () => fileInput.click());
+
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('dragover');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('dragover');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+            handleFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(Array.from(e.target.files));
+        });
+
+        function handleFiles(files) {
+            selectedFiles = files;
+            displaySelectedFiles();
+        }
+
+        function displaySelectedFiles() {
+            const container = document.getElementById('selectedFiles');
+            
+            if (selectedFiles.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = selectedFiles.map((file, index) => `
+                <div class="file-item">
+                    <div class="file-item-left">
+                        <i class="fas fa-file-pdf"></i>
+                        <span class="file-item-name">${file.name}</span>
+                    </div>
+                    <button type="button" onclick="removeFile(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            displaySelectedFiles();
+        }
+
+        // Show message
+        function showMessage(elementId, message, type) {
+            const icons = {
+                error: 'fa-exclamation-circle',
+                success: 'fa-check-circle',
+                info: 'fa-info-circle'
+            };
+            
+            const el = document.getElementById(elementId);
+            el.innerHTML = `
+                <div class="message ${type}">
+                    <i class="fas ${icons[type]}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            setTimeout(() => el.innerHTML = '', 5000);
+        }
+
+        // Check if student folder exists and get their info
+        async function getStudentInfo(matricId) {
+            try {
+                const { data, error } = await supabaseClient.storage
+                    .from(BUCKET_NAME)
+                    .download(`${matricId}/info.json`);
+                
+                if (error) return null;
+                
+                const text = await data.text();
+                return JSON.parse(text);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        // Save student info
+        async function saveStudentInfo(matricId, fullName, matricNumber) {
+            const info = {
+                fullName,
+                matricNumber,
+                updatedAt: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(info)], { type: 'application/json' });
+            
+            const { error } = await supabaseClient.storage
+                .from(BUCKET_NAME)
+                .upload(`${matricId}/info.json`, blob, {
+                    upsert: true
+                });
+
+            if (error) throw error;
+        }
+
+        // Submit form handler
+        document.getElementById('submissionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('fullName').value.trim();
+            const matricNumber = document.getElementById('matricNumber').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (selectedFiles.length === 0) {
+                showMessage('submitMessage', 'Please select at least one PDF file', 'error');
+                return;
+            }
+
+            // Get matric ID (last 3 digits)
+            const matricId = getMatricId(matricNumber);
+
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+
+            try {
+                // Check if student exists
+                const existingInfo = await getStudentInfo(matricId);
+                
+                if (existingInfo) {
+                    showMessage('submitMessage', `Found existing submission for ${existingInfo.fullName}. Adding files...`, 'info');
+                }
+
+                // Save/update student info
+                await saveStudentInfo(matricId, fullName, matricNumber);
+
+                // Upload each file
+                const uploadPromises = selectedFiles.map(async (file) => {
+                    const filePath = `${matricId}/${file.name}`;
+                    
+                    const { data, error } = await supabaseClient.storage
+                        .from(BUCKET_NAME)
+                        .upload(filePath, file, {
+                            upsert: true
+                        });
+
+                    if (error) throw error;
+                    return data;
+                });
+
+                await Promise.all(uploadPromises);
+
+                showMessage('submitMessage', 
+                    `Successfully uploaded ${selectedFiles.length} file(s) for ${fullName} (${matricNumber})`, 
+                    'success');
+                
+                // Reset form
+                document.getElementById('submissionForm').reset();
+                selectedFiles = [];
+                displaySelectedFiles();
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                showMessage('submitMessage', 
+                    `Upload failed: ${error.message}`, 
+                    'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Assignments';
+            }
+        });
+
+        // Load all submissions
+        async function loadSubmissions() {
+            const listEl = document.getElementById('submissionsList');
+            listEl.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner"></i>
+                    <p>Loading submissions...</p>
+                </div>
+            `;
+
+            try {
+                const { data: folders, error } = await supabaseClient.storage
+                    .from(BUCKET_NAME)
+                    .list();
+
+                if (error) throw error;
+
+                if (!folders || folders.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p>No submissions yet</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const studentsData = await Promise.all(
+                    folders.map(async (folder) => {
+                        // Get student info
+                        const info = await getStudentInfo(folder.name);
+                        
+                        // Get files
+                        const { data: files } = await supabaseClient.storage
+                            .from(BUCKET_NAME)
+                            .list(folder.name);
+
+                        // Filter out info.json
+                        const pdfFiles = (files || []).filter(f => f.name !== 'info.json');
+
+                        return {
+                            matricId: folder.name,
+                            fullName: info?.fullName || 'Unknown',
+                            matricNumber: info?.matricNumber || folder.name,
+                            files: pdfFiles
+                        };
+                    })
+                );
+
+                listEl.innerHTML = studentsData.map(student => {
+                    const fileLinks = student.files.map(file => {
+                        const { data } = supabaseClient.storage
+                            .from(BUCKET_NAME)
+                            .getPublicUrl(`${student.matricId}/${file.name}`);
+                        
+                        return `
+                            <a href="${data.publicUrl}" target="_blank" class="file-link">
+                                <div class="file-link-left">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span>${file.name}</span>
+                                </div>
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="student-card">
+                            <div class="student-header">
+                                <div class="student-info">
+                                    <h3>${student.fullName}</h3>
+                                    <div class="student-matric">
+                                        <i class="fas fa-id-card"></i>
+                                        ${student.matricNumber}
+                                    </div>
+                                </div>
+                                <div class="file-count">
+                                    ${student.files.length} file${student.files.length !== 1 ? 's' : ''}
+                                </div>
+                            </div>
+                            <div class="file-links">
+                                ${fileLinks || '<span style="color: #999;">No files</span>'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                showMessage('viewMessage', `Loaded ${studentsData.length} submission(s)`, 'success');
+
+            } catch (error) {
+                console.error('Load error:', error);
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error loading submissions: ${error.message}</p>
+                    </div>
+                `;
+                showMessage('viewMessage', 'Failed to load submissions', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
