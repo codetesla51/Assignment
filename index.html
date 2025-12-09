@@ -190,16 +190,22 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            flex: 1;
+            min-width: 0;
         }
 
         .file-item i {
             color: #d32f2f;
             font-size: 1.2rem;
+            flex-shrink: 0;
         }
 
         .file-item-name {
             font-size: 0.9rem;
             color: #333;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .file-item button {
@@ -209,6 +215,7 @@
             cursor: pointer;
             padding: 5px 10px;
             font-size: 1.1rem;
+            flex-shrink: 0;
         }
 
         .file-item button:hover {
@@ -275,6 +282,7 @@
 
         .message i {
             font-size: 1.2rem;
+            flex-shrink: 0;
         }
 
         .message.error {
@@ -321,12 +329,21 @@
             margin-bottom: 16px;
             padding-bottom: 16px;
             border-bottom: 1px solid #f0f0f0;
+            gap: 10px;
+        }
+
+        .student-info {
+            flex: 1;
+            min-width: 0;
         }
 
         .student-info h3 {
             font-size: 1.1rem;
             font-weight: 600;
             margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .student-matric {
@@ -344,6 +361,8 @@
             font-size: 0.85rem;
             font-weight: 500;
             color: #666;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .file-links {
@@ -352,38 +371,55 @@
             gap: 10px;
         }
 
-        .file-link {
+        .file-link-wrapper {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 10px;
             padding: 12px 16px;
             background: #fafafa;
             border-radius: 6px;
-            text-decoration: none;
-            color: #333;
-            transition: all 0.3s;
             border: 1px solid #f0f0f0;
+            transition: all 0.3s;
         }
 
-        .file-link:hover {
-            background: #000;
-            color: #fff;
-            border-color: #000;
+        .file-link-wrapper:hover {
+            background: #f5f5f5;
+        }
+
+        .file-link {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-decoration: none;
+            color: #333;
+            min-width: 0;
         }
 
         .file-link-left {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-link-left span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .file-link i {
             color: #d32f2f;
             font-size: 1.2rem;
+            flex-shrink: 0;
         }
 
-        .file-link:hover i {
-            color: #fff;
+        .file-link .fa-external-link-alt {
+            color: #666;
+            font-size: 0.9rem;
+            flex-shrink: 0;
         }
 
         .delete-btn {
@@ -400,6 +436,7 @@
             justify-content: center;
             width: 32px;
             height: 32px;
+            flex-shrink: 0;
         }
 
         .delete-btn:hover {
@@ -424,6 +461,7 @@
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            padding: 20px;
         }
 
         .modal.active {
@@ -435,7 +473,7 @@
             border-radius: 8px;
             padding: 30px;
             max-width: 400px;
-            width: 90%;
+            width: 100%;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
@@ -463,6 +501,7 @@
         .modal-body p {
             color: #666;
             margin-bottom: 15px;
+            word-wrap: break-word;
         }
 
         .modal-body input {
@@ -519,12 +558,6 @@
             cursor: not-allowed;
         }
 
-        .file-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
         .loading {
             text-align: center;
             padding: 60px 20px;
@@ -574,11 +607,75 @@
 
             .tab {
                 font-size: 0.9rem;
-                padding: 14px 16px;
+                padding: 14px 12px;
+                gap: 6px;
             }
 
             .tab span {
                 display: none;
+            }
+
+            .student-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .file-count {
+                align-self: flex-start;
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+
+            .modal-footer {
+                flex-direction: column;
+            }
+
+            .modal-btn {
+                width: 100%;
+            }
+
+            .file-link-wrapper {
+                padding: 10px 12px;
+            }
+
+            .file-link-left {
+                gap: 8px;
+            }
+
+            .delete-btn {
+                width: 28px;
+                height: 28px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 20px 15px;
+            }
+
+            .header h1 {
+                font-size: 1.3rem;
+            }
+
+            .file-upload-area {
+                padding: 20px;
+            }
+
+            .file-upload-area i {
+                font-size: 2rem;
+            }
+
+            input[type="text"] {
+                padding: 12px 14px;
+                font-size: 0.95rem;
+            }
+
+            .btn {
+                padding: 14px;
+                font-size: 0.95rem;
             }
         }
     </style>
@@ -675,7 +772,7 @@
             </div>
             <div class="modal-footer">
                 <button class="modal-btn modal-btn-cancel" onclick="closeDeleteModal()">Cancel</button>
-                <button class="modal-btn modal-btn-confirm" onclick="confirmDelete()">Delete</button>
+                <button class="modal-btn modal-btn-confirm" id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
             </div>
         </div>
     </div>
@@ -693,9 +790,14 @@
         let selectedFiles = [];
         let deleteContext = null;
 
+        // Sanitize file name - remove invalid characters
+        function sanitizeFileName(fileName) {
+            // Replace invalid characters with underscores
+            return fileName.replace(/[\[\]{}#%\\<>*?/:|"]/g, '_');
+        }
+
         // Extract last 3 digits from matric number
         function getMatricId(matricNumber) {
-            // Remove slashes and get last 3 digits
             const cleaned = matricNumber.replace(/[\/\s]/g, '');
             return cleaned.slice(-3);
         }
@@ -752,17 +854,23 @@
                 return;
             }
 
-            container.innerHTML = selectedFiles.map((file, index) => `
-                <div class="file-item">
-                    <div class="file-item-left">
-                        <i class="fas fa-file-pdf"></i>
-                        <span class="file-item-name">${file.name}</span>
+            container.innerHTML = selectedFiles.map((file, index) => {
+                const sanitizedName = sanitizeFileName(file.name);
+                const displayName = sanitizedName !== file.name ? 
+                    `${sanitizedName} (renamed)` : file.name;
+                
+                return `
+                    <div class="file-item">
+                        <div class="file-item-left">
+                            <i class="fas fa-file-pdf"></i>
+                            <span class="file-item-name" title="${displayName}">${displayName}</span>
+                        </div>
+                        <button type="button" onclick="removeFile(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
-                    <button type="button" onclick="removeFile(${index})">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function removeFile(index) {
@@ -836,27 +944,23 @@
                 return;
             }
 
-            // Get matric ID (last 3 digits)
             const matricId = getMatricId(matricNumber);
 
-            // Disable button and show loading
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
 
             try {
-                // Check if student exists
                 const existingInfo = await getStudentInfo(matricId);
 
                 if (existingInfo) {
                     showMessage('submitMessage', `Found existing submission for ${existingInfo.fullName}. Adding files...`, 'info');
                 }
 
-                // Save/update student info
                 await saveStudentInfo(matricId, fullName, matricNumber);
 
-                // Upload each file
                 const uploadPromises = selectedFiles.map(async (file) => {
-                    const filePath = `${matricId}/${file.name}`;
+                    const sanitizedName = sanitizeFileName(file.name);
+                    const filePath = `${matricId}/${sanitizedName}`;
 
                     const { data, error } = await supabaseClient.storage
                         .from(BUCKET_NAME)
@@ -874,7 +978,6 @@
                     `Successfully uploaded ${selectedFiles.length} file(s) for ${fullName} (${matricNumber})`, 
                     'success');
 
-                // Reset form
                 document.getElementById('submissionForm').reset();
                 selectedFiles = [];
                 displaySelectedFiles();
@@ -919,15 +1022,12 @@
 
                 const studentsData = await Promise.all(
                     folders.map(async (folder) => {
-                        // Get student info
                         const info = await getStudentInfo(folder.name);
 
-                        // Get files
                         const { data: files } = await supabaseClient.storage
                             .from(BUCKET_NAME)
                             .list(folder.name);
 
-                        // Filter out info.json
                         const pdfFiles = (files || []).filter(f => f.name !== 'info.json');
 
                         return {
@@ -946,15 +1046,15 @@
                             .getPublicUrl(`${student.matricId}/${file.name}`);
 
                         return `
-                            <div class="file-link" style="display: flex; align-items: center; justify-content: space-between; text-decoration: none;">
-                                <a href="${data.publicUrl}" target="_blank" style="flex: 1; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: inherit;">
+                            <div class="file-link-wrapper">
+                                <a href="${data.publicUrl}" target="_blank" class="file-link">
                                     <div class="file-link-left">
                                         <i class="fas fa-file-pdf"></i>
-                                        <span>${file.name}</span>
+                                        <span title="${file.name}">${file.name}</span>
                                     </div>
                                     <i class="fas fa-external-link-alt"></i>
                                 </a>
-                                <button class="delete-btn" onclick="deleteFile('${student.matricId}', '${file.name}', this)" style="margin-left: 10px;">
+                                <button class="delete-btn" onclick="deleteFile('${student.matricId}', '${file.name.replace(/'/g, "\\'")}', this)">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -965,7 +1065,7 @@
                         <div class="student-card">
                             <div class="student-header">
                                 <div class="student-info">
-                                    <h3>${student.fullName}</h3>
+                                    <h3 title="${student.fullName}">${student.fullName}</h3>
                                     <div class="student-matric">
                                         <i class="fas fa-id-card"></i>
                                         ${student.matricNumber}
@@ -997,13 +1097,13 @@
         }
 
         // Delete individual file
-        async function deleteFile(matricId, fileName, button) {
+        function deleteFile(matricId, fileName, button) {
             deleteContext = { matricId, fileName, button };
             document.getElementById('deleteFileName').textContent = fileName;
             document.getElementById('deletePassword').value = '';
             document.getElementById('deleteModal').classList.add('active');
+            document.getElementById('confirmDeleteBtn').disabled = false;
 
-            // Focus on password input
             setTimeout(() => {
                 document.getElementById('deletePassword').focus();
             }, 100);
@@ -1016,18 +1116,26 @@
 
         async function confirmDelete() {
             const password = document.getElementById('deletePassword').value;
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
 
             if (password !== 'edu313') {
                 showMessage('viewMessage', 'Incorrect password!', 'error');
+                document.getElementById('deletePassword').value = '';
+                document.getElementById('deletePassword').focus();
                 return;
             }
 
+            if (!deleteContext) return;
+
             const { matricId, fileName, button } = deleteContext;
 
-            closeDeleteModal();
-
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            closeDeleteModal();
 
             try {
                 const { error } = await supabaseClient.storage
@@ -1036,13 +1144,20 @@
 
                 if (error) throw error;
 
-                showMessage('viewMessage', `Deleted ${fileName}`, 'success');
-                loadSubmissions();
+                showMessage('viewMessage', `Successfully deleted ${fileName}`, 'success');
+                
+                setTimeout(() => {
+                    loadSubmissions();
+                }, 500);
+
             } catch (error) {
                 console.error('Delete error:', error);
                 showMessage('viewMessage', `Failed to delete: ${error.message}`, 'error');
                 button.disabled = false;
                 button.innerHTML = '<i class="fas fa-trash"></i>';
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = 'Delete';
             }
         }
 
