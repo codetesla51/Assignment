@@ -37,6 +37,7 @@
             max-width: 900px;
             margin: 0 auto;
             padding: 30px 20px;
+            overflow-x: hidden;
         }
 
         .tabs {
@@ -87,6 +88,7 @@
             border-radius: 8px;
             padding: 30px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow-x: hidden;
         }
 
         .tab-content {
@@ -993,7 +995,7 @@
             }
         });
 
-        // Load all submissions
+        // Load all submissions - OPTIMIZED VERSION
         async function loadSubmissions() {
             const listEl = document.getElementById('submissionsList');
             listEl.innerHTML = `
@@ -1020,24 +1022,47 @@
                     return;
                 }
 
-                const studentsData = await Promise.all(
-                    folders.map(async (folder) => {
-                        const info = await getStudentInfo(folder.name);
+                // Process students in parallel batches of 10 for better performance
+                const batchSize = 10;
+                const studentsData = [];
+                
+                for (let i = 0; i < folders.length; i += batchSize) {
+                    const batch = folders.slice(i, i + batchSize);
+                    const batchResults = await Promise.all(
+                        batch.map(async (folder) => {
+                            try {
+                                // Fetch info and files in parallel
+                                const [infoResult, filesResult] = await Promise.all([
+                                    supabaseClient.storage.from(BUCKET_NAME).download(`${folder.name}/info.json`).catch(() => null),
+                                    supabaseClient.storage.from(BUCKET_NAME).list(folder.name)
+                                ]);
 
-                        const { data: files } = await supabaseClient.storage
-                            .from(BUCKET_NAME)
-                            .list(folder.name);
+                                let info = null;
+                                if (infoResult && infoResult.data) {
+                                    const text = await infoResult.data.text();
+                                    info = JSON.parse(text);
+                                }
 
-                        const pdfFiles = (files || []).filter(f => f.name !== 'info.json');
+                                const pdfFiles = (filesResult.data || []).filter(f => f.name !== 'info.json');
 
-                        return {
-                            matricId: folder.name,
-                            fullName: info?.fullName || 'Unknown',
-                            matricNumber: info?.matricNumber || folder.name,
-                            files: pdfFiles
-                        };
-                    })
-                );
+                                return {
+                                    matricId: folder.name,
+                                    fullName: info?.fullName || 'Unknown',
+                                    matricNumber: info?.matricNumber || folder.name,
+                                    files: pdfFiles
+                                };
+                            } catch (err) {
+                                console.error(`Error loading folder ${folder.name}:`, err);
+                                return null;
+                            }
+                        })
+                    );
+                    
+                    studentsData.push(...batchResults.filter(Boolean));
+                    
+                    // Show progress
+                    showMessage('viewMessage', `Loading... ${studentsData.length}/${folders.length}`, 'info');
+                }
 
                 listEl.innerHTML = studentsData.map(student => {
                     const fileLinks = student.files.map(file => {
