@@ -386,6 +386,145 @@
             color: #fff;
         }
 
+        .delete-btn {
+            background: #d32f2f;
+            color: #fff;
+            border: none;
+            padding: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+        }
+
+        .delete-btn:hover {
+            background: #b71c1c;
+            transform: scale(1.1);
+        }
+
+        .delete-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .modal-header i {
+            color: #d32f2f;
+            font-size: 1.5rem;
+        }
+
+        .modal-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            margin-bottom: 25px;
+        }
+
+        .modal-body p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .modal-body input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+        }
+
+        .modal-body input:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .modal-btn-cancel {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #e0e0e0;
+        }
+
+        .modal-btn-confirm {
+            background: #d32f2f;
+            color: #fff;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #b71c1c;
+        }
+
+        .modal-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
         .loading {
             text-align: center;
             padding: 60px 20px;
@@ -465,7 +604,7 @@
         <div id="submit" class="tab-content active">
             <div class="card">
                 <div id="submitMessage"></div>
-                
+
                 <form id="submissionForm">
                     <div class="form-group">
                         <label>
@@ -523,6 +662,24 @@
         </div>
     </div>
 
+    <!-- Delete Password Modal -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-lock"></i>
+                <h3>Password Required</h3>
+            </div>
+            <div class="modal-body">
+                <p>Enter password to delete <strong id="deleteFileName"></strong>:</p>
+                <input type="password" id="deletePassword" placeholder="Enter password">
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Supabase credentials
         const SUPABASE_URL = 'https://ehasinzstggpytkeeqlm.supabase.co';
@@ -534,6 +691,7 @@
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let selectedFiles = [];
+        let deleteContext = null;
 
         // Extract last 3 digits from matric number
         function getMatricId(matricNumber) {
@@ -546,7 +704,7 @@
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
+
             event.target.closest('.tab').classList.add('active');
             document.getElementById(tabName).classList.add('active');
 
@@ -588,7 +746,7 @@
 
         function displaySelectedFiles() {
             const container = document.getElementById('selectedFiles');
-            
+
             if (selectedFiles.length === 0) {
                 container.innerHTML = '';
                 return;
@@ -619,7 +777,7 @@
                 success: 'fa-check-circle',
                 info: 'fa-info-circle'
             };
-            
+
             const el = document.getElementById(elementId);
             el.innerHTML = `
                 <div class="message ${type}">
@@ -636,9 +794,9 @@
                 const { data, error } = await supabaseClient.storage
                     .from(BUCKET_NAME)
                     .download(`${matricId}/info.json`);
-                
+
                 if (error) return null;
-                
+
                 const text = await data.text();
                 return JSON.parse(text);
             } catch (error) {
@@ -655,7 +813,7 @@
             };
 
             const blob = new Blob([JSON.stringify(info)], { type: 'application/json' });
-            
+
             const { error } = await supabaseClient.storage
                 .from(BUCKET_NAME)
                 .upload(`${matricId}/info.json`, blob, {
@@ -668,7 +826,7 @@
         // Submit form handler
         document.getElementById('submissionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const fullName = document.getElementById('fullName').value.trim();
             const matricNumber = document.getElementById('matricNumber').value.trim();
             const submitBtn = document.getElementById('submitBtn');
@@ -688,7 +846,7 @@
             try {
                 // Check if student exists
                 const existingInfo = await getStudentInfo(matricId);
-                
+
                 if (existingInfo) {
                     showMessage('submitMessage', `Found existing submission for ${existingInfo.fullName}. Adding files...`, 'info');
                 }
@@ -699,7 +857,7 @@
                 // Upload each file
                 const uploadPromises = selectedFiles.map(async (file) => {
                     const filePath = `${matricId}/${file.name}`;
-                    
+
                     const { data, error } = await supabaseClient.storage
                         .from(BUCKET_NAME)
                         .upload(filePath, file, {
@@ -715,7 +873,7 @@
                 showMessage('submitMessage', 
                     `Successfully uploaded ${selectedFiles.length} file(s) for ${fullName} (${matricNumber})`, 
                     'success');
-                
+
                 // Reset form
                 document.getElementById('submissionForm').reset();
                 selectedFiles = [];
@@ -763,7 +921,7 @@
                     folders.map(async (folder) => {
                         // Get student info
                         const info = await getStudentInfo(folder.name);
-                        
+
                         // Get files
                         const { data: files } = await supabaseClient.storage
                             .from(BUCKET_NAME)
@@ -786,15 +944,20 @@
                         const { data } = supabaseClient.storage
                             .from(BUCKET_NAME)
                             .getPublicUrl(`${student.matricId}/${file.name}`);
-                        
+
                         return `
-                            <a href="${data.publicUrl}" target="_blank" class="file-link">
-                                <div class="file-link-left">
-                                    <i class="fas fa-file-pdf"></i>
-                                    <span>${file.name}</span>
-                                </div>
-                                <i class="fas fa-external-link-alt"></i>
-                            </a>
+                            <div class="file-link" style="display: flex; align-items: center; justify-content: space-between; text-decoration: none;">
+                                <a href="${data.publicUrl}" target="_blank" style="flex: 1; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: inherit;">
+                                    <div class="file-link-left">
+                                        <i class="fas fa-file-pdf"></i>
+                                        <span>${file.name}</span>
+                                    </div>
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                                <button class="delete-btn" onclick="deleteFile('${student.matricId}', '${file.name}', this)" style="margin-left: 10px;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         `;
                     }).join('');
 
@@ -832,6 +995,73 @@
                 showMessage('viewMessage', 'Failed to load submissions', 'error');
             }
         }
+
+        // Delete individual file
+        async function deleteFile(matricId, fileName, button) {
+            deleteContext = { matricId, fileName, button };
+            document.getElementById('deleteFileName').textContent = fileName;
+            document.getElementById('deletePassword').value = '';
+            document.getElementById('deleteModal').classList.add('active');
+            
+            // Focus on password input
+            setTimeout(() => {
+                document.getElementById('deletePassword').focus();
+            }, 100);
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            deleteContext = null;
+        }
+
+        async function confirmDelete() {
+            const password = document.getElementById('deletePassword').value;
+            
+            if (password !== 'edu313') {
+                showMessage('viewMessage', 'Incorrect password!', 'error');
+                return;
+            }
+
+            const { matricId, fileName, button } = deleteContext;
+            
+            closeDeleteModal();
+            
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                const { error } = await supabaseClient.storage
+                    .from(BUCKET_NAME)
+                    .remove([`${matricId}/${fileName}`]);
+
+                if (error) throw error;
+
+                showMessage('viewMessage', `Deleted ${fileName}`, 'success');
+                loadSubmissions();
+            } catch (error) {
+                console.error('Delete error:', error);
+                showMessage('viewMessage', `Failed to delete: ${error.message}`, 'error');
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-trash"></i>';
+            }
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeDeleteModal();
+            }
+            if (e.key === 'Enter' && document.getElementById('deleteModal').classList.contains('active')) {
+                confirmDelete();
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('deleteModal').addEventListener('click', (e) => {
+            if (e.target.id === 'deleteModal') {
+                closeDeleteModal();
+            }
+        });
     </script>
 </body>
 </html>
