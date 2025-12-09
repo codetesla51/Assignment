@@ -681,10 +681,9 @@
     </div>
 
     <script>
-        // Supabase credentials
+        // Supabase credentials - USING ANON KEY (PUBLIC KEY)
         const SUPABASE_URL = 'https://ehasinzstggpytkeeqlm.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoYXNpbnpzdGdncHl0a2VlcWxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU2NTAwOTgsImV4cCI6MjA1MTIyNjA5OH0.QkdL2GU9mfbJiC75a0Q8JAcus5fP6wV08HNjz8KTlyQ
-';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoYXNpbnpzdGdncHl0a2VlcWxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU2NTAwOTgsImV4cCI6MjA1MTIyNjA5OH0.QkdL2GU9mfbJiC75a0Q8JAcus5fP6wV08HNjz8KTlyQ';
         const BUCKET_NAME = 'Assignments';
 
         // Initialize Supabase client
@@ -1003,7 +1002,7 @@
             document.getElementById('deleteFileName').textContent = fileName;
             document.getElementById('deletePassword').value = '';
             document.getElementById('deleteModal').classList.add('active');
-            
+
             // Focus on password input
             setTimeout(() => {
                 document.getElementById('deletePassword').focus();
@@ -1017,16 +1016,16 @@
 
         async function confirmDelete() {
             const password = document.getElementById('deletePassword').value;
-            
+
             if (password !== 'edu313') {
                 showMessage('viewMessage', 'Incorrect password!', 'error');
                 return;
             }
 
             const { matricId, fileName, button } = deleteContext;
-            
+
             closeDeleteModal();
-            
+
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
