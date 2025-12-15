@@ -134,6 +134,36 @@
             box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
         }
 
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 14px 16px 14px 46px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #000;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 1rem;
+        }
+
         .file-upload-area {
             border: 2px dashed #ddd;
             border-radius: 6px;
@@ -755,6 +785,10 @@
                     <i class="fas fa-sync-alt"></i>
                     Refresh Submissions
                 </button>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search by name or matric number...">
+                </div>
                 <div id="submissionsList" class="submissions-grid">
                     <div class="empty-state">
                         <i class="fas fa-inbox"></i>
@@ -795,6 +829,7 @@
 
         let selectedFiles = [];
         let deleteContext = null;
+        let allStudentsData = [];
 
         // Sanitize file name - remove invalid characters
         function sanitizeFileName(fileName) {
@@ -864,11 +899,11 @@
                 const sanitizedName = sanitizeFileName(file.name);
                 const displayName = sanitizedName !== file.name ? 
                     `${sanitizedName} (renamed)` : file.name;
-                
+
                 // Truncate long filenames in display
                 const truncatedName = displayName.length > 50 ? 
                     displayName.substring(0, 47) + '...' : displayName;
-                
+
                 return `
                     <div class="file-item">
                         <div class="file-item-left">
@@ -1003,6 +1038,87 @@
             }
         });
 
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            filterSubmissions(searchTerm);
+        });
+
+        function filterSubmissions(searchTerm) {
+            if (!searchTerm) {
+                displaySubmissions(allStudentsData);
+                return;
+            }
+
+            const filtered = allStudentsData.filter(student => {
+                const nameMatch = student.fullName.toLowerCase().includes(searchTerm);
+                const matricMatch = student.matricNumber.toLowerCase().includes(searchTerm);
+                return nameMatch || matricMatch;
+            });
+
+            displaySubmissions(filtered);
+        }
+
+        function displaySubmissions(studentsData) {
+            const listEl = document.getElementById('submissionsList');
+
+            if (studentsData.length === 0) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <p>No submissions found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = studentsData.map(student => {
+                const fileLinks = student.files.map(file => {
+                    const { data } = supabaseClient.storage
+                        .from(BUCKET_NAME)
+                        .getPublicUrl(`${student.matricId}/${file.name}`);
+
+                    const truncatedName = file.name.length > 40 ? 
+                        file.name.substring(0, 37) + '...' : file.name;
+
+                    return `
+                        <div class="file-link-wrapper">
+                            <a href="${data.publicUrl}" target="_blank" class="file-link">
+                                <div class="file-link-left">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span title="${file.name}">${truncatedName}</span>
+                                </div>
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                            <button class="delete-btn" onclick="deleteFile('${student.matricId}', '${file.name.replace(/'/g, "\\'")}', this)">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="student-card">
+                        <div class="student-header">
+                            <div class="student-info">
+                                <h3 title="${student.fullName}">${student.fullName}</h3>
+                                <div class="student-matric">
+                                    <i class="fas fa-id-card"></i>
+                                    ${student.matricNumber}
+                                </div>
+                            </div>
+                            <div class="file-count">
+                                ${student.files.length} file${student.files.length !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                        <div class="file-links">
+                            ${fileLinks || '<span style="color: #999;">No files</span>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         // Load all submissions - HIGHLY OPTIMIZED VERSION
         async function loadSubmissions() {
             const listEl = document.getElementById('submissionsList');
@@ -1027,19 +1143,19 @@
                             <p>No submissions yet</p>
                         </div>
                     `;
+                    allStudentsData = [];
                     return;
                 }
 
                 // OPTIMIZED: Process ALL students in parallel with larger batch size
-                const batchSize = 20; // Increased from 10
+                const batchSize = 20;
                 const studentsData = [];
-                
+
                 for (let i = 0; i < folders.length; i += batchSize) {
                     const batch = folders.slice(i, i + batchSize);
                     const batchResults = await Promise.all(
                         batch.map(async (folder) => {
                             try {
-                                // OPTIMIZED: Fetch info and files in parallel
                                 const [infoResult, filesResult] = await Promise.all([
                                     supabaseClient.storage.from(BUCKET_NAME).download(`${folder.name}/info.json`).catch(() => null),
                                     supabaseClient.storage.from(BUCKET_NAME).list(folder.name)
@@ -1065,57 +1181,12 @@
                             }
                         })
                     );
-                    
+
                     studentsData.push(...batchResults.filter(Boolean));
                 }
 
-                // OPTIMIZED: Build HTML in one go instead of progressive updates
-                listEl.innerHTML = studentsData.map(student => {
-                    const fileLinks = student.files.map(file => {
-                        const { data } = supabaseClient.storage
-                            .from(BUCKET_NAME)
-                            .getPublicUrl(`${student.matricId}/${file.name}`);
-
-                        // Truncate long filenames
-                        const truncatedName = file.name.length > 40 ? 
-                            file.name.substring(0, 37) + '...' : file.name;
-
-                        return `
-                            <div class="file-link-wrapper">
-                                <a href="${data.publicUrl}" target="_blank" class="file-link">
-                                    <div class="file-link-left">
-                                        <i class="fas fa-file-pdf"></i>
-                                        <span title="${file.name}">${truncatedName}</span>
-                                    </div>
-                                    <i class="fas fa-external-link-alt"></i>
-                                </a>
-                                <button class="delete-btn" onclick="deleteFile('${student.matricId}', '${file.name.replace(/'/g, "\\'")}', this)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        `;
-                    }).join('');
-
-                    return `
-                        <div class="student-card">
-                            <div class="student-header">
-                                <div class="student-info">
-                                    <h3 title="${student.fullName}">${student.fullName}</h3>
-                                    <div class="student-matric">
-                                        <i class="fas fa-id-card"></i>
-                                        ${student.matricNumber}
-                                    </div>
-                                </div>
-                                <div class="file-count">
-                                    ${student.files.length} file${student.files.length !== 1 ? 's' : ''}
-                                </div>
-                            </div>
-                            <div class="file-links">
-                                ${fileLinks || '<span style="color: #999;">No files</span>'}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                allStudentsData = studentsData;
+                displaySubmissions(allStudentsData);
 
                 showMessage('viewMessage', `Loaded ${studentsData.length} submission(s)`, 'success');
 
@@ -1128,6 +1199,7 @@
                     </div>
                 `;
                 showMessage('viewMessage', 'Failed to load submissions', 'error');
+                allStudentsData = [];
             }
         }
 
@@ -1166,7 +1238,7 @@
 
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-            
+
             button.disabled = true;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
@@ -1180,7 +1252,7 @@
                 if (error) throw error;
 
                 showMessage('viewMessage', `Successfully deleted ${fileName}`, 'success');
-                
+
                 setTimeout(() => {
                     loadSubmissions();
                 }, 500);
