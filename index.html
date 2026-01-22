@@ -818,472 +818,491 @@
     </div>
 
     <script>
-        // Supabase credentials - USING ANON KEY (PUBLIC KEY)
-        const SUPABASE_URL = 'https://ehasinzstggpytkeeqlm.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoYXNpbnpzdGdncHl0a2VlcWxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU2NTAwOTgsImV4cCI6MjA1MTIyNjA5OH0.QkdL2GU9mfbJiC75a0Q8JAcus5fP6wV08HNjz8KTlyQ';
-        const BUCKET_NAME = 'Assignments';
+    // Supabase credentials - USING ANON KEY (PUBLIC KEY)
+    const SUPABASE_URL = 'https://ehasinzstggpytkeeqlm.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoYXNpbnpzdGdncHl0a2VlcWxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU2NTAwOTgsImV4cCI6MjA1MTIyNjA5OH0.QkdL2GU9mfbJiC75a0Q8JAcus5fP6wV08HNjz8KTlyQ';
+    const BUCKET_NAME = 'Assignments';
 
-        // Initialize Supabase client
-        const { createClient } = supabase;
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Initialize Supabase client
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let selectedFiles = [];
-        let deleteContext = null;
-        let allStudentsData = [];
+    let selectedFiles = [];
+    let deleteContext = null;
+    let allStudentsData = [];
 
-        // Sanitize file name - remove invalid characters
-        function sanitizeFileName(fileName) {
-            // Replace invalid characters with underscores
-            return fileName.replace(/[\[\]{}#%\\<>*?/:|"]/g, '_');
+    // Sanitize file name - remove invalid characters
+    function sanitizeFileName(fileName) {
+        // Replace invalid characters with underscores
+        return fileName.replace(/[\[\]{}#%\\<>*?/:|"]/g, '_');
+    }
+
+    // Extract last 3 digits from matric number
+    function getMatricId(matricNumber) {
+        const cleaned = matricNumber.replace(/[\/\s]/g, '');
+        return cleaned.slice(-3);
+    }
+
+    // Tab switching
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        event.target.closest('.tab').classList.add('active');
+        document.getElementById(tabName).classList.add('active');
+
+        if (tabName === 'view') {
+            loadSubmissions();
+        }
+    }
+
+    // File upload area interactions
+    const dropArea = document.getElementById('dropArea');
+    const fileInput = document.getElementById('files');
+
+    dropArea.addEventListener('click', () => fileInput.click());
+
+    dropArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropArea.classList.add('dragover');
+    });
+
+    dropArea.addEventListener('dragleave', () => {
+        dropArea.classList.remove('dragover');
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+        handleFiles(files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(Array.from(e.target.files));
+    });
+
+    function handleFiles(files) {
+        selectedFiles = files;
+        displaySelectedFiles();
+    }
+
+    function displaySelectedFiles() {
+        const container = document.getElementById('selectedFiles');
+
+        if (selectedFiles.length === 0) {
+            container.innerHTML = '';
+            return;
         }
 
-        // Extract last 3 digits from matric number
-        function getMatricId(matricNumber) {
-            const cleaned = matricNumber.replace(/[\/\s]/g, '');
-            return cleaned.slice(-3);
+        container.innerHTML = selectedFiles.map((file, index) => {
+            const sanitizedName = sanitizeFileName(file.name);
+            const displayName = sanitizedName !== file.name ? 
+                `${sanitizedName} (renamed)` : file.name;
+
+            // Truncate long filenames in display
+            const truncatedName = displayName.length > 50 ? 
+                displayName.substring(0, 47) + '...' : displayName;
+
+            return `
+                <div class="file-item">
+                    <div class="file-item-left">
+                        <i class="fas fa-file-pdf"></i>
+                        <span class="file-item-name" title="${displayName}">${truncatedName}</span>
+                    </div>
+                    <button type="button" onclick="removeFile(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        displaySelectedFiles();
+    }
+
+    // Show message
+    function showMessage(elementId, message, type) {
+        const icons = {
+            error: 'fa-exclamation-circle',
+            success: 'fa-check-circle',
+            info: 'fa-info-circle'
+        };
+
+        const el = document.getElementById(elementId);
+        el.innerHTML = `
+            <div class="message ${type}">
+                <i class="fas ${icons[type]}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        setTimeout(() => el.innerHTML = '', 5000);
+    }
+
+    // Check if student folder exists and get their info
+    async function getStudentInfo(matricId) {
+        try {
+            const { data, error } = await supabaseClient.storage
+                .from(BUCKET_NAME)
+                .download(`${matricId}/info.json`);
+
+            if (error) return null;
+
+            const text = await data.text();
+            return JSON.parse(text);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // Save student info
+    async function saveStudentInfo(matricId, fullName, matricNumber) {
+        const info = {
+            fullName,
+            matricNumber,
+            updatedAt: new Date().toISOString()
+        };
+
+        const blob = new Blob([JSON.stringify(info)], { type: 'application/json' });
+
+        const { error } = await supabaseClient.storage
+            .from(BUCKET_NAME)
+            .upload(`${matricId}/info.json`, blob, {
+                upsert: true
+            });
+
+        if (error) throw error;
+    }
+
+    // Submit form handler
+    document.getElementById('submissionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const fullName = document.getElementById('fullName').value.trim();
+        const matricNumber = document.getElementById('matricNumber').value.trim();
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (selectedFiles.length === 0) {
+            showMessage('submitMessage', 'Please select at least one PDF file', 'error');
+            return;
         }
 
-        // Tab switching
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        const matricId = getMatricId(matricNumber);
 
-            event.target.closest('.tab').classList.add('active');
-            document.getElementById(tabName).classList.add('active');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
 
-            if (tabName === 'view') {
-                loadSubmissions();
+        try {
+            const existingInfo = await getStudentInfo(matricId);
+
+            if (existingInfo) {
+                showMessage('submitMessage', `Found existing submission for ${existingInfo.fullName}. Adding files...`, 'info');
             }
-        }
 
-        // File upload area interactions
-        const dropArea = document.getElementById('dropArea');
-        const fileInput = document.getElementById('files');
+            await saveStudentInfo(matricId, fullName, matricNumber);
 
-        dropArea.addEventListener('click', () => fileInput.click());
-
-        dropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropArea.classList.add('dragover');
-        });
-
-        dropArea.addEventListener('dragleave', () => {
-            dropArea.classList.remove('dragover');
-        });
-
-        dropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropArea.classList.remove('dragover');
-            const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
-            handleFiles(files);
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            handleFiles(Array.from(e.target.files));
-        });
-
-        function handleFiles(files) {
-            selectedFiles = files;
-            displaySelectedFiles();
-        }
-
-        function displaySelectedFiles() {
-            const container = document.getElementById('selectedFiles');
-
-            if (selectedFiles.length === 0) {
-                container.innerHTML = '';
-                return;
-            }
-
-            container.innerHTML = selectedFiles.map((file, index) => {
+            const uploadPromises = selectedFiles.map(async (file) => {
                 const sanitizedName = sanitizeFileName(file.name);
-                const displayName = sanitizedName !== file.name ? 
-                    `${sanitizedName} (renamed)` : file.name;
+                const filePath = `${matricId}/${sanitizedName}`;
 
-                // Truncate long filenames in display
-                const truncatedName = displayName.length > 50 ? 
-                    displayName.substring(0, 47) + '...' : displayName;
+                const { data, error } = await supabaseClient.storage
+                    .from(BUCKET_NAME)
+                    .upload(filePath, file, {
+                        upsert: true
+                    });
+
+                if (error) throw error;
+                return data;
+            });
+
+            await Promise.all(uploadPromises);
+
+            showMessage('submitMessage', 
+                `Successfully uploaded ${selectedFiles.length} file(s) for ${fullName} (${matricNumber})`, 
+                'success');
+
+            document.getElementById('submissionForm').reset();
+            selectedFiles = [];
+            displaySelectedFiles();
+
+        } catch (error) {
+            console.error('Upload error:', error);
+            showMessage('submitMessage', 
+                `Upload failed: ${error.message}`, 
+                'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Assignments';
+        }
+    });
+
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        filterSubmissions(searchTerm);
+    });
+
+    function filterSubmissions(searchTerm) {
+        if (!searchTerm) {
+            displaySubmissions(allStudentsData);
+            return;
+        }
+
+        const filtered = allStudentsData.filter(student => {
+            const nameMatch = student.fullName.toLowerCase().includes(searchTerm);
+            const matricMatch = student.matricNumber.toLowerCase().includes(searchTerm);
+            return nameMatch || matricMatch;
+        });
+
+        displaySubmissions(filtered);
+    }
+
+    function displaySubmissions(studentsData) {
+        const listEl = document.getElementById('submissionsList');
+
+        if (studentsData.length === 0) {
+            listEl.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-search"></i>
+                    <p>No submissions found</p>
+                </div>
+            `;
+            return;
+        }
+
+        listEl.innerHTML = studentsData.map(student => {
+            const fileLinks = student.files.map(file => {
+                const { data } = supabaseClient.storage
+                    .from(BUCKET_NAME)
+                    .getPublicUrl(`${student.matricId}/${file.name}`);
+
+                const truncatedName = file.name.length > 40 ? 
+                    file.name.substring(0, 37) + '...' : file.name;
 
                 return `
-                    <div class="file-item">
-                        <div class="file-item-left">
-                            <i class="fas fa-file-pdf"></i>
-                            <span class="file-item-name" title="${displayName}">${truncatedName}</span>
-                        </div>
-                        <button type="button" onclick="removeFile(${index})">
-                            <i class="fas fa-times"></i>
+                    <div class="file-link-wrapper">
+                        <a href="${data.publicUrl}" target="_blank" class="file-link">
+                            <div class="file-link-left">
+                                <i class="fas fa-file-pdf"></i>
+                                <span title="${file.name}">${truncatedName}</span>
+                            </div>
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                        <button class="delete-btn" onclick="deleteFile('${student.matricId}', '${file.name.replace(/'/g, "\\'")}', this)">
+                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 `;
             }).join('');
-        }
 
-        function removeFile(index) {
-            selectedFiles.splice(index, 1);
-            displaySelectedFiles();
-        }
-
-        // Show message
-        function showMessage(elementId, message, type) {
-            const icons = {
-                error: 'fa-exclamation-circle',
-                success: 'fa-check-circle',
-                info: 'fa-info-circle'
-            };
-
-            const el = document.getElementById(elementId);
-            el.innerHTML = `
-                <div class="message ${type}">
-                    <i class="fas ${icons[type]}"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            setTimeout(() => el.innerHTML = '', 5000);
-        }
-
-        // Check if student folder exists and get their info
-        async function getStudentInfo(matricId) {
-            try {
-                const { data, error } = await supabaseClient.storage
-                    .from(BUCKET_NAME)
-                    .download(`${matricId}/info.json`);
-
-                if (error) return null;
-
-                const text = await data.text();
-                return JSON.parse(text);
-            } catch (error) {
-                return null;
-            }
-        }
-
-        // Save student info
-        async function saveStudentInfo(matricId, fullName, matricNumber) {
-            const info = {
-                fullName,
-                matricNumber,
-                updatedAt: new Date().toISOString()
-            };
-
-            const blob = new Blob([JSON.stringify(info)], { type: 'application/json' });
-
-            const { error } = await supabaseClient.storage
-                .from(BUCKET_NAME)
-                .upload(`${matricId}/info.json`, blob, {
-                    upsert: true
-                });
-
-            if (error) throw error;
-        }
-
-        // Submit form handler
-        document.getElementById('submissionForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const fullName = document.getElementById('fullName').value.trim();
-            const matricNumber = document.getElementById('matricNumber').value.trim();
-            const submitBtn = document.getElementById('submitBtn');
-
-            if (selectedFiles.length === 0) {
-                showMessage('submitMessage', 'Please select at least one PDF file', 'error');
-                return;
-            }
-
-            const matricId = getMatricId(matricNumber);
-
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-
-            try {
-                const existingInfo = await getStudentInfo(matricId);
-
-                if (existingInfo) {
-                    showMessage('submitMessage', `Found existing submission for ${existingInfo.fullName}. Adding files...`, 'info');
-                }
-
-                await saveStudentInfo(matricId, fullName, matricNumber);
-
-                const uploadPromises = selectedFiles.map(async (file) => {
-                    const sanitizedName = sanitizeFileName(file.name);
-                    const filePath = `${matricId}/${sanitizedName}`;
-
-                    const { data, error } = await supabaseClient.storage
-                        .from(BUCKET_NAME)
-                        .upload(filePath, file, {
-                            upsert: true
-                        });
-
-                    if (error) throw error;
-                    return data;
-                });
-
-                await Promise.all(uploadPromises);
-
-                showMessage('submitMessage', 
-                    `Successfully uploaded ${selectedFiles.length} file(s) for ${fullName} (${matricNumber})`, 
-                    'success');
-
-                document.getElementById('submissionForm').reset();
-                selectedFiles = [];
-                displaySelectedFiles();
-
-            } catch (error) {
-                console.error('Upload error:', error);
-                showMessage('submitMessage', 
-                    `Upload failed: ${error.message}`, 
-                    'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Assignments';
-            }
-        });
-
-        // Search functionality
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase().trim();
-            filterSubmissions(searchTerm);
-        });
-
-        function filterSubmissions(searchTerm) {
-            if (!searchTerm) {
-                displaySubmissions(allStudentsData);
-                return;
-            }
-
-            const filtered = allStudentsData.filter(student => {
-                const nameMatch = student.fullName.toLowerCase().includes(searchTerm);
-                const matricMatch = student.matricNumber.toLowerCase().includes(searchTerm);
-                return nameMatch || matricMatch;
-            });
-
-            displaySubmissions(filtered);
-        }
-
-        function displaySubmissions(studentsData) {
-            const listEl = document.getElementById('submissionsList');
-
-            if (studentsData.length === 0) {
-                listEl.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <p>No submissions found</p>
-                    </div>
-                `;
-                return;
-            }
-
-            listEl.innerHTML = studentsData.map(student => {
-                const fileLinks = student.files.map(file => {
-                    const { data } = supabaseClient.storage
-                        .from(BUCKET_NAME)
-                        .getPublicUrl(`${student.matricId}/${file.name}`);
-
-                    const truncatedName = file.name.length > 40 ? 
-                        file.name.substring(0, 37) + '...' : file.name;
-
-                    return `
-                        <div class="file-link-wrapper">
-                            <a href="${data.publicUrl}" target="_blank" class="file-link">
-                                <div class="file-link-left">
-                                    <i class="fas fa-file-pdf"></i>
-                                    <span title="${file.name}">${truncatedName}</span>
-                                </div>
-                                <i class="fas fa-external-link-alt"></i>
-                            </a>
-                            <button class="delete-btn" onclick="deleteFile('${student.matricId}', '${file.name.replace(/'/g, "\\'")}', this)">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-
-                return `
-                    <div class="student-card">
-                        <div class="student-header">
-                            <div class="student-info">
-                                <h3 title="${student.fullName}">${student.fullName}</h3>
-                                <div class="student-matric">
-                                    <i class="fas fa-id-card"></i>
-                                    ${student.matricNumber}
-                                </div>
-                            </div>
-                            <div class="file-count">
-                                ${student.files.length} file${student.files.length !== 1 ? 's' : ''}
+            return `
+                <div class="student-card">
+                    <div class="student-header">
+                        <div class="student-info">
+                            <h3 title="${student.fullName}">${student.fullName}</h3>
+                            <div class="student-matric">
+                                <i class="fas fa-id-card"></i>
+                                ${student.matricNumber}
                             </div>
                         </div>
-                        <div class="file-links">
-                            ${fileLinks || '<span style="color: #999;">No files</span>'}
+                        <div class="file-count">
+                            ${student.files.length} file${student.files.length !== 1 ? 's' : ''}
                         </div>
                     </div>
-                `;
-            }).join('');
-        }
-
-        // Load all submissions - HIGHLY OPTIMIZED VERSION
-        async function loadSubmissions() {
-            const listEl = document.getElementById('submissionsList');
-            listEl.innerHTML = `
-                <div class="loading">
-                    <i class="fas fa-spinner"></i>
-                    <p>Loading submissions...</p>
+                    <div class="file-links">
+                        ${fileLinks || '<span style="color: #999;">No files</span>'}
+                    </div>
                 </div>
             `;
+        }).join('');
+    }
 
-            try {
+    // Load all submissions - FIXED WITH PAGINATION
+    async function loadSubmissions() {
+        const listEl = document.getElementById('submissionsList');
+        listEl.innerHTML = `
+            <div class="loading">
+                <i class="fas fa-spinner"></i>
+                <p>Loading submissions...</p>
+            </div>
+        `;
+
+        try {
+            // Fetch ALL folders with pagination
+            let allFolders = [];
+            let offset = 0;
+            const limit = 1000; // Maximum allowed by Supabase
+            
+            while (true) {
                 const { data: folders, error } = await supabaseClient.storage
                     .from(BUCKET_NAME)
-                    .list();
+                    .list('', {
+                        limit: limit,
+                        offset: offset
+                    });
 
                 if (error) throw error;
+                
+                if (!folders || folders.length === 0) break;
+                
+                allFolders.push(...folders);
+                
+                // If we got fewer results than the limit, we've reached the end
+                if (folders.length < limit) break;
+                
+                offset += limit;
+            }
 
-                if (!folders || folders.length === 0) {
-                    listEl.innerHTML = `
-                        <div class="empty-state">
-                            <i class="fas fa-folder-open"></i>
-                            <p>No submissions yet</p>
-                        </div>
-                    `;
-                    allStudentsData = [];
-                    return;
-                }
-
-                // OPTIMIZED: Process ALL students in parallel with larger batch size
-                const batchSize = 20;
-                const studentsData = [];
-
-                for (let i = 0; i < folders.length; i += batchSize) {
-                    const batch = folders.slice(i, i + batchSize);
-                    const batchResults = await Promise.all(
-                        batch.map(async (folder) => {
-                            try {
-                                const [infoResult, filesResult] = await Promise.all([
-                                    supabaseClient.storage.from(BUCKET_NAME).download(`${folder.name}/info.json`).catch(() => null),
-                                    supabaseClient.storage.from(BUCKET_NAME).list(folder.name)
-                                ]);
-
-                                let info = null;
-                                if (infoResult && infoResult.data) {
-                                    const text = await infoResult.data.text();
-                                    info = JSON.parse(text);
-                                }
-
-                                const pdfFiles = (filesResult.data || []).filter(f => f.name !== 'info.json');
-
-                                return {
-                                    matricId: folder.name,
-                                    fullName: info?.fullName || 'Unknown',
-                                    matricNumber: info?.matricNumber || folder.name,
-                                    files: pdfFiles
-                                };
-                            } catch (err) {
-                                console.error(`Error loading folder ${folder.name}:`, err);
-                                return null;
-                            }
-                        })
-                    );
-
-                    studentsData.push(...batchResults.filter(Boolean));
-                }
-
-                allStudentsData = studentsData;
-                displaySubmissions(allStudentsData);
-
-                showMessage('viewMessage', `Loaded ${studentsData.length} submission(s)`, 'success');
-
-            } catch (error) {
-                console.error('Load error:', error);
+            if (allFolders.length === 0) {
                 listEl.innerHTML = `
                     <div class="empty-state">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Error loading submissions: ${error.message}</p>
+                        <i class="fas fa-folder-open"></i>
+                        <p>No submissions yet</p>
                     </div>
                 `;
-                showMessage('viewMessage', 'Failed to load submissions', 'error');
                 allStudentsData = [];
-            }
-        }
-
-        // Delete individual file
-        function deleteFile(matricId, fileName, button) {
-            deleteContext = { matricId, fileName, button };
-            document.getElementById('deleteFileName').textContent = fileName;
-            document.getElementById('deletePassword').value = '';
-            document.getElementById('deleteModal').classList.add('active');
-            document.getElementById('confirmDeleteBtn').disabled = false;
-
-            setTimeout(() => {
-                document.getElementById('deletePassword').focus();
-            }, 100);
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.remove('active');
-            deleteContext = null;
-        }
-
-        async function confirmDelete() {
-            const password = document.getElementById('deletePassword').value;
-            const confirmBtn = document.getElementById('confirmDeleteBtn');
-
-            if (password !== 'edu313') {
-                showMessage('viewMessage', 'Incorrect password!', 'error');
-                document.getElementById('deletePassword').value = '';
-                document.getElementById('deletePassword').focus();
                 return;
             }
 
-            if (!deleteContext) return;
+            // OPTIMIZED: Process ALL students in parallel with larger batch size
+            const batchSize = 20;
+            const studentsData = [];
 
-            const { matricId, fileName, button } = deleteContext;
+            for (let i = 0; i < allFolders.length; i += batchSize) {
+                const batch = allFolders.slice(i, i + batchSize);
+                const batchResults = await Promise.all(
+                    batch.map(async (folder) => {
+                        try {
+                            const [infoResult, filesResult] = await Promise.all([
+                                supabaseClient.storage.from(BUCKET_NAME).download(`${folder.name}/info.json`).catch(() => null),
+                                supabaseClient.storage.from(BUCKET_NAME).list(folder.name)
+                            ]);
 
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+                            let info = null;
+                            if (infoResult && infoResult.data) {
+                                const text = await infoResult.data.text();
+                                info = JSON.parse(text);
+                            }
 
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                            const pdfFiles = (filesResult.data || []).filter(f => f.name !== 'info.json');
 
-            closeDeleteModal();
+                            return {
+                                matricId: folder.name,
+                                fullName: info?.fullName || 'Unknown',
+                                matricNumber: info?.matricNumber || folder.name,
+                                files: pdfFiles
+                            };
+                        } catch (err) {
+                            console.error(`Error loading folder ${folder.name}:`, err);
+                            return null;
+                        }
+                    })
+                );
 
-            try {
-                const { error } = await supabaseClient.storage
-                    .from(BUCKET_NAME)
-                    .remove([`${matricId}/${fileName}`]);
-
-                if (error) throw error;
-
-                showMessage('viewMessage', `Successfully deleted ${fileName}`, 'success');
-
-                setTimeout(() => {
-                    loadSubmissions();
-                }, 500);
-
-            } catch (error) {
-                console.error('Delete error:', error);
-                showMessage('viewMessage', `Failed to delete: ${error.message}`, 'error');
-                button.disabled = false;
-                button.innerHTML = '<i class="fas fa-trash"></i>';
-            } finally {
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = 'Delete';
+                studentsData.push(...batchResults.filter(Boolean));
             }
+
+            allStudentsData = studentsData;
+            displaySubmissions(allStudentsData);
+
+            showMessage('viewMessage', `Loaded ${studentsData.length} submission(s)`, 'success');
+
+        } catch (error) {
+            console.error('Load error:', error);
+            listEl.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error loading submissions: ${error.message}</p>
+                </div>
+            `;
+            showMessage('viewMessage', 'Failed to load submissions', 'error');
+            allStudentsData = [];
+        }
+    }
+
+    // Delete individual file
+    function deleteFile(matricId, fileName, button) {
+        deleteContext = { matricId, fileName, button };
+        document.getElementById('deleteFileName').textContent = fileName;
+        document.getElementById('deletePassword').value = '';
+        document.getElementById('deleteModal').classList.add('active');
+        document.getElementById('confirmDeleteBtn').disabled = false;
+
+        setTimeout(() => {
+            document.getElementById('deletePassword').focus();
+        }, 100);
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.remove('active');
+        deleteContext = null;
+    }
+
+    async function confirmDelete() {
+        const password = document.getElementById('deletePassword').value;
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+        if (password !== 'edu313') {
+            showMessage('viewMessage', 'Incorrect password!', 'error');
+            document.getElementById('deletePassword').value = '';
+            document.getElementById('deletePassword').focus();
+            return;
         }
 
-        // Close modal on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeDeleteModal();
-            }
-            if (e.key === 'Enter' && document.getElementById('deleteModal').classList.contains('active')) {
-                confirmDelete();
-            }
-        });
+        if (!deleteContext) return;
 
-        // Close modal when clicking outside
-        document.getElementById('deleteModal').addEventListener('click', (e) => {
-            if (e.target.id === 'deleteModal') {
-                closeDeleteModal();
-            }
-        });
-    </script>
+        const { matricId, fileName, button } = deleteContext;
+
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        closeDeleteModal();
+
+        try {
+            const { error } = await supabaseClient.storage
+                .from(BUCKET_NAME)
+                .remove([`${matricId}/${fileName}`]);
+
+            if (error) throw error;
+
+            showMessage('viewMessage', `Successfully deleted ${fileName}`, 'success');
+
+            setTimeout(() => {
+                loadSubmissions();
+            }, 500);
+
+        } catch (error) {
+            console.error('Delete error:', error);
+            showMessage('viewMessage', `Failed to delete: ${error.message}`, 'error');
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-trash"></i>';
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = 'Delete';
+        }
+    }
+
+    // Close modal on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeDeleteModal();
+        }
+        if (e.key === 'Enter' && document.getElementById('deleteModal').classList.contains('active')) {
+            confirmDelete();
+        }
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('deleteModal').addEventListener('click', (e) => {
+        if (e.target.id === 'deleteModal') {
+            closeDeleteModal();
+        }
+    });
+</script>
 </body>
 </html>
